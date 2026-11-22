@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search,
@@ -14,13 +14,9 @@ import {
 } from 'lucide-react';
 
 // Temporary sample list of participating colleges — replace with API data later
-const SAMPLE_COLLEGES = [
-  { id: 'sample-1', name: 'Northwood Institute of Technology (Sample)' },
-  { id: 'sample-2', name: 'Greenfield State University (Sample)' },
-  { id: 'sample-3', name: 'St. Xavier College of Arts & Science (Sample)' },
-  { id: 'sample-4', name: 'Riverside Engineering College (Sample)' },
-  { id: 'sample-5', name: 'Metro City Polytechnic Campus (Sample)' },
-];
+
+
+
 
 function Register() {
   // Controlled form state
@@ -33,6 +29,35 @@ function Register() {
     confirmPassword: '',
     acceptTerms: false,
   });
+
+  const [colleges, setColleges] = useState([]);
+const [collegesLoading, setCollegesLoading] = useState(true);
+const [collegeLoadError, setCollegeLoadError] = useState('');
+
+useEffect(() => {
+    const fetchColleges = async () => {
+        try {
+            const response = await fetch(
+                'http://localhost:5000/api/colleges'
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch colleges');
+            }
+
+            const data = await response.json();
+
+            setColleges(data.colleges || []);
+        } catch (error) {
+            console.error('College fetch error:', error);
+            setCollegeLoadError('Unable to load colleges. Please try again.');
+        } finally {
+            setCollegesLoading(false);
+        }
+    };
+
+    fetchColleges();
+}, []);
 
   // UI & validation states
   const [showPassword, setShowPassword] = useState(false);
@@ -105,18 +130,57 @@ function Register() {
   };
 
   // Handle form submission without fake account creation or localStorage storage
-  const handleSubmit = (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
     setValidationNotice('');
 
     if (!validateForm()) {
-      return;
+        return;
     }
 
-    setValidationNotice(
-      'All registration fields passed validation. Backend account creation will be connected in a later step.'
-    );
-  };
+    try {
+        const response = await fetch(
+            'http://localhost:5000/api/auth/register',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    fullName: formData.fullName.trim(),
+                    email: formData.email.trim(),
+                    studentId: formData.studentId.trim(),
+                    college: formData.college,
+                    password: formData.password,
+                    confirmPassword: formData.confirmPassword,
+                }),
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Registration failed.');
+        }
+
+        setValidationNotice(
+            'Account created successfully! You can now log in.'
+        );
+
+        setFormData({
+            fullName: '',
+            email: '',
+            studentId: '',
+            college: '',
+            password: '',
+            confirmPassword: '',
+            acceptTerms: false,
+        });
+
+    } catch (error) {
+        setValidationNotice(error.message);
+    }
+};
 
   // Helper for consistent input border & focus ring classes
   const getInputClasses = (hasError, hasRightIcon = false) =>
@@ -291,16 +355,19 @@ function Register() {
                       !formData.college ? 'text-gray-400' : 'text-[#111827]'
                     }`}
                   >
-                    <option value="">Choose a campus...</option>
-                    {SAMPLE_COLLEGES.map((college) => (
-                      <option
-                        key={college.id}
-                        value={college.id}
-                        className="text-[#111827]"
-                      >
-                        {college.name}
-                      </option>
-                    ))}
+                    <option value="">
+    {collegesLoading ? 'Loading colleges...' : 'Choose a campus...'}
+</option>
+
+{colleges.map((college) => (
+    <option
+        key={college._id}
+        value={college.name}
+        className="text-[#111827]"
+    >
+        {college.name}
+    </option>
+))}
                   </select>
                 </div>
                 {errors.college && (
@@ -311,9 +378,17 @@ function Register() {
                 )}
               </div>
             </div>
-            <p className="text-xs text-[#4B5563] -mt-2">
-              Showing sample campuses for preview. Additional colleges will be added as campuses onboard.
-            </p>
+            {collegeLoadError && (
+    <p className="text-xs text-red-600 -mt-2">
+        {collegeLoadError}
+    </p>
+)}
+
+{!collegesLoading && !collegeLoadError && colleges.length === 0 && (
+    <p className="text-xs text-gray-500 -mt-2">
+        No colleges are currently available.
+    </p>
+)}
 
             {/* 5. Password */}
             <div>

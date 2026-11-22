@@ -227,9 +227,7 @@ function ReportFoundItem() {
           <h1 className="text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">
             Report a Found Item
           </h1>
-          <p className="mt-1.5 text-sm sm:text-base text-[#4B5563]">
-            Share details about an item you found on campus so its rightful owner can identify and claim it.
-          </p>
+         
         </div>
 
         {/* Form Card */}

@@ -299,15 +299,12 @@ function Dashboard() {
         <section className="bg-white rounded-2xl border border-gray-200/80 p-6 sm:p-7 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 text-[#047857] text-xs font-medium">
-              <span>{DEMO_STUDENT.college}</span>
+             
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">
               Welcome to FindIt
             </h1>
-            <p className="text-sm sm:text-base text-[#4B5563]">
-              Manage your lost and found reports across your campus. Logged in as{' '}
-              <span className="font-semibold text-[#111827]">{DEMO_STUDENT.name}</span>.
-            </p>
+           
           </div>
 
          </section>
@@ -353,9 +350,7 @@ function Dashboard() {
         <section aria-label="Sample report overview statistics">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-[#111827]">Campus Report Overview</h2>
-            <span className="text-xs font-medium text-[#4B5563] bg-white px-2.5 py-1 rounded-full border border-gray-200">
-              Static Sample Numbers
-            </span>
+           
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">

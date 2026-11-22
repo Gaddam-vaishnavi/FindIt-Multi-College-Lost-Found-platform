@@ -2,6 +2,8 @@ import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import ReportLostItem from './pages/ReportLostItem';
 import ReportFoundItem from './pages/ReportFoundItem';
@@ -9,12 +11,19 @@ import BrowseItems from './pages/BrowseItems';
 import ItemDetails from './pages/ItemDetails';
 import Notifications from './pages/Notifications';
 import AdminDashboard from './pages/AdminDashboard';
+import LandingPage from './pages/LandingPage';
+
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route
+    path="/reset-password/:token"
+    element={<ResetPassword />}
+/>
       <Route path="/register" element={<Register />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/report-lost" element={<ReportLostItem />} />

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
 
+
 function Login() {
   // Form input states
   const [email, setEmail] = useState('');
@@ -12,7 +13,7 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [statusMessage, setStatusMessage] = useState('');
-
+  const [isLoading, setIsLoading] = useState(false);
   // Validate empty fields and email format
   const validateForm = () => {
     const newErrors = {};
@@ -33,19 +34,53 @@ function Login() {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setStatusMessage('');
 
     if (!validateForm()) {
-      return;
+        return;
     }
 
-    // Frontend-only placeholder (no fake login redirect or backend call)
-    setStatusMessage(
-      'Form validated successfully. Backend authentication will be connected in a future step.'
-    );
-  };
+    setIsLoading(true);
+
+    try {
+        const response = await fetch(
+            'http://localhost:5000/api/auth/login',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email.trim(),
+                    password: password,
+                }),
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Login failed.');
+        }
+
+        if (rememberMe) {
+            localStorage.setItem('token', data.token);
+        } else {
+            sessionStorage.setItem('token', data.token);
+        }
+
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        window.location.href = '/dashboard';
+
+    } catch (error) {
+        setStatusMessage(error.message);
+    } finally {
+        setIsLoading(false);
+    }
+};
 
   // Clear field-specific error as the user types
   const handleEmailChange = (e) => {
@@ -204,21 +239,22 @@ function Login() {
                 <span className="text-sm text-[#4B5563]">Remember me</span>
               </label>
 
-              <span
-                title="Password reset coming soon"
-                className="text-sm font-medium text-[#4B5563]/70 cursor-not-allowed select-none"
-              >
-                Forgot password?
-              </span>
+              <Link
+    to="/forgot-password"
+    className="text-sm font-medium text-[#059669] hover:text-[#047857] transition-colors"
+>
+    Forgot password?
+</Link>
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full py-2.5 px-4 rounded-lg bg-[#059669] hover:bg-[#047857] text-white text-sm font-semibold shadow-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#059669] cursor-pointer"
-            >
-              Log In
-            </button>
+           <button
+    type="submit"
+    disabled={isLoading}
+    className="w-full py-2.5 px-4 rounded-lg bg-[#059669] hover:bg-[#047857] disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold shadow-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#059669] cursor-pointer"
+>
+    {isLoading ? 'Logging in...' : 'Log In'}
+</button>
           </form>
 
           {/* Divider & Registration Link */}

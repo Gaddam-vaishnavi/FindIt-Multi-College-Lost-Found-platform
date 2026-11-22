@@ -191,9 +191,7 @@ function Notifications() {
             <h1 className="text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">
               Notifications
             </h1>
-            <p className="mt-1 text-sm sm:text-base text-[#4B5563]">
-              Stay updated on your lost and found reports.
-            </p>
+            
           </div>
 
           <button

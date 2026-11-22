@@ -189,9 +189,7 @@ function BrowseItems() {
             <h1 className="text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">
               Browse Lost &amp; Found Items
             </h1>
-            <p className="mt-1.5 text-sm sm:text-base text-[#4B5563]">
-              Discover items reported across participating college campuses.
-            </p>
+            
           </div>
 
           <div className="text-sm font-medium text-[#4B5563] bg-white px-3.5 py-2 rounded-xl border border-gray-200/80 self-start md:self-auto">

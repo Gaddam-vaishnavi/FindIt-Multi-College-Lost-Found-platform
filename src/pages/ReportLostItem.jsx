@@ -28,15 +28,7 @@ const ITEM_CATEGORIES = [
 
 // Temporary sample campus list — replace with API data later
 // Temporary sample campus list — replace with API data later
-const SAMPLE_COLLEGES = [
-  { id: 'bvrit-narsapur', name: 'B V Raju Institute of Technology (BVRIT), Narsapur (Sample)' },
-  { id: 'sample-1', name: 'Northwood Institute of Technology (Sample)' },
-  { id: 'sample-2', name: 'Greenfield State University (Sample)' },
-  { id: 'sample-3', name: 'St. Xavier College of Arts & Science (Sample)' },
-  { id: 'sample-4', name: 'Riverside Engineering College (Sample)' },
-  { id: 'sample-5', name: 'Metro City Polytechnic Campus (Sample)' },
-  { id: 'other', name: 'Other / College Not Listed' },
-];
+
 // Helper to get today's local date in YYYY-MM-DD format for date validation
 const getTodayDateString = () => {
   const today = new Date();
@@ -69,15 +61,33 @@ function ReportLostItem() {
   // Validation & UI feedback state
   const [errors, setErrors] = useState({});
   const [validationNotice, setValidationNotice] = useState('');
-
+  const [colleges, setColleges] = useState([]);
+const [collegeLoading, setCollegeLoading] = useState(true);
+const [collegeError, setCollegeError] = useState('');
   // Clean up object URL when image changes or component unmounts to avoid memory leaks
-  useEffect(() => {
-    return () => {
-      if (imagePreviewUrl) {
-        URL.revokeObjectURL(imagePreviewUrl);
-      }
+ useEffect(() => {
+    const fetchColleges = async () => {
+        try {
+            const response = await fetch(
+                'http://localhost:5000/api/colleges'
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Unable to load colleges.');
+            }
+
+            setColleges(data.colleges || []);
+        } catch (error) {
+            setCollegeError(error.message);
+        } finally {
+            setCollegeLoading(false);
+        }
     };
-  }, [imagePreviewUrl]);
+
+    fetchColleges();
+}, []);
 
   // Handle text, select, and textarea changes
   // Handle text, select, and textarea changes
@@ -178,18 +188,77 @@ function ReportLostItem() {
   };
 
   // Handle form submission (frontend validation preview only)
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setValidationNotice('');
+  
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setValidationNotice('');
 
-    if (!validateForm()) {
+  if (!validateForm()) {
+    return;
+  }
+
+  try {
+    // Get the login token
+    const token =
+      localStorage.getItem('token') ||
+      sessionStorage.getItem('token');
+
+    if (!token) {
+      setValidationNotice('Please log in again to submit your report.');
       return;
     }
 
+    // Match frontend categories with backend categories
+    const categoryMap = {
+      'Books & Stationery': 'Books',
+      'Personal Items': 'Others',
+      'Other': 'Others',
+    };
+
+    const backendCategory =
+      categoryMap[formData.category] || formData.category;
+
+    // Prepare data for the backend
+    const reportData = {
+      title: formData.itemName.trim(),
+      description: [
+        formData.description,
+        formData.identifyingDetails
+          ? `Identifying details: ${formData.identifyingDetails}`
+          : '',
+      ].filter(Boolean).join('\n\n'),
+      category: backendCategory,
+      type: 'lost',
+      location: formData.location.trim(),
+      date: formData.dateLost,
+    };
+
+    // Send report to backend
+    const response = await fetch('http://localhost:5000/api/items', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(reportData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to submit your report.');
+    }
+
     setValidationNotice(
-      'Form validation passed. This is a frontend preview — report submission will connect to the backend API in a later step.'
+      'Your lost item report has been submitted successfully!'
     );
-  };
+
+  } catch (error) {
+    console.error('Report submission error:', error);
+    setValidationNotice(error.message || 'Something went wrong. Please try again.');
+  }
+};
+
 
   // Shared input styling helper
   const getFieldClasses = (hasError, withLeftIcon = true) =>
@@ -228,9 +297,7 @@ function ReportLostItem() {
           <h1 className="text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">
             Report a Lost Item
           </h1>
-          <p className="mt-1.5 text-sm sm:text-base text-[#4B5563]">
-            Provide clear details about your lost belonging so fellow students and campus staff can help return it.
-          </p>
+         
         </div>
 
         {/* Form Card */}
@@ -409,16 +476,19 @@ function ReportLostItem() {
                       !formData.college ? 'text-gray-400' : 'text-[#111827]'
                     }`}
                   >
-                    <option value="">Select campus...</option>
-                    {SAMPLE_COLLEGES.map((campus) => (
-                      <option
-                        key={campus.id}
-                        value={campus.id}
-                        className="text-[#111827]"
-                      >
-                        {campus.name}
-                      </option>
-                    ))}
+                    <option value="">
+    {collegeLoading ? 'Loading colleges...' : 'Select campus...'}
+</option>
+                    {colleges.map((college) => (
+    <option
+        key={college._id}
+        value={college.name}
+        className="text-[#111827]"
+    >
+        {college.name}
+    </option>
+))}
+<option value="other">Other / College Not Listed</option>
                   </select>
                 </div>
                 {errors.college && (
