@@ -1,4 +1,3 @@
-
 const User = require('../models/User');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
@@ -9,25 +8,40 @@ const jwt = require('jsonwebtoken');
 const registerUser = async (req, res) => {
     try {
         const {
-    fullName,
-    email,
-    password,
-    confirmPassword,
-    college,
-    studentId
-} = req.body;
+            fullName,
+            email,
+            password,
+            confirmPassword,
+            college,
+            studentId
+        } = req.body;
 
         // Check required fields
         if (
-    !fullName ||
-    !email ||
-    !password ||
-    !confirmPassword ||
-    !college ||
-    !studentId
-) {
+            !fullName ||
+            !email ||
+            !password ||
+            !confirmPassword ||
+            !college ||
+            !studentId
+        ) {
             return res.status(400).json({
                 message: 'All fields are required'
+            });
+        }
+
+        // Email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+            return res.status(400).json({
+                message: 'Please provide a valid email address'
+            });
+        }
+
+        // Password length check
+        if (password.length < 8) {
+            return res.status(400).json({
+                message: 'Password must be at least 8 characters long'
             });
         }
 
@@ -54,12 +68,12 @@ const registerUser = async (req, res) => {
 
         // Create user
         const user = await User.create({
-            fullName,
+            fullName: fullName.trim(),
             email: email.toLowerCase().trim(),
             password: hashedPassword,
-            college,
-            studentId,
-            role: 'student' // Default role
+            college: college.trim(),
+            studentId: studentId.trim(),
+            role: 'student'
         });
 
         return res.status(201).json({
@@ -69,20 +83,20 @@ const registerUser = async (req, res) => {
                 fullName: user.fullName,
                 email: user.email,
                 college: user.college,
+                studentId: user.studentId,
                 role: user.role
             }
         });
 
     } catch (error) {
         console.error('Registration error:', error.message);
-
         return res.status(500).json({
             message: 'Server error during registration'
         });
     }
 };
 
-
+// Login user
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -138,18 +152,33 @@ const loginUser = async (req, res) => {
                 fullName: user.fullName,
                 email: user.email,
                 college: user.college,
+                studentId: user.studentId,
                 role: user.role
             }
         });
 
     } catch (error) {
         console.error('Login error:', error.message);
-
         return res.status(500).json({
             message: 'Server error during login'
         });
     }
 };
+
+// Get current logged-in user
+const getMe = async (req, res) => {
+    try {
+        return res.status(200).json({
+            message: 'User authenticated successfully',
+            user: req.user
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Server error retrieving user profile'
+        });
+    }
+};
+
 // Forgot Password
 const forgotPassword = async (req, res) => {
     try {
@@ -166,7 +195,6 @@ const forgotPassword = async (req, res) => {
             email: email.trim().toLowerCase()
         });
 
-        // Use the same response whether the account exists or not.
         const successMessage =
             'If an account exists with this email, a password reset link will be sent.';
 
@@ -191,23 +219,27 @@ const forgotPassword = async (req, res) => {
 
         await user.save();
 
-        // Create the password reset URL
-        const resetUrl =
-            `http://localhost:5173/reset-password/${resetToken}`;
+        // Create the password reset URL using configured client URL
+        const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+        const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
 
-        // Send the reset email
-        await sendEmail({
-            email: user.email,
-            subject: 'FindIt - Password Reset',
-            message: `
-                <h2>Password Reset Request</h2>
-                <p>You requested to reset your FindIt password.</p>
-                <p>Click the link below to create a new password:</p>
-                <a href="${resetUrl}">Reset My Password</a>
-                <p>This link expires in 15 minutes.</p>
-                <p>If you did not request this, ignore this email.</p>
-            `
-        });
+        // Attempt to send reset email
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: 'FindIt - Password Reset',
+                message: `
+                    <h2>Password Reset Request</h2>
+                    <p>You requested to reset your FindIt password.</p>
+                    <p>Click the link below to create a new password:</p>
+                    <a href="${resetUrl}">Reset My Password</a>
+                    <p>This link expires in 15 minutes.</p>
+                    <p>If you did not request this, ignore this email.</p>
+                `
+            });
+        } catch (emailError) {
+            console.warn('Email dispatch warning (SMTP might not be configured):', emailError.message);
+        }
 
         return res.status(200).json({
             success: true,
@@ -215,16 +247,84 @@ const forgotPassword = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Forgot password error:', error);
-
+        console.error('Forgot password error:', error.message);
         return res.status(500).json({
             success: false,
             message: 'Unable to process password reset request.'
         });
     }
 };
+
+// Reset Password
+const resetPassword = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { password, confirmPassword } = req.body;
+
+        if (!token) {
+            return res.status(400).json({
+                message: 'Reset token is required.'
+            });
+        }
+
+        if (!password || !confirmPassword) {
+            return res.status(400).json({
+                message: 'New password and confirmation are required.'
+            });
+        }
+
+        if (password.length < 8) {
+            return res.status(400).json({
+                message: 'Password must be at least 8 characters long.'
+            });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({
+                message: 'Passwords do not match.'
+            });
+        }
+
+        // Hash the incoming token to match database
+        const hashedToken = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+
+        const user = await User.findOne({
+            resetPasswordToken: hashedToken,
+            resetPasswordExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                message: 'Invalid or expired password reset token.'
+            });
+        }
+
+        // Set new password
+        user.password = await bcrypt.hash(password, 10);
+        user.resetPasswordToken = null;
+        user.resetPasswordExpires = null;
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password reset successful. You may now log in.'
+        });
+
+    } catch (error) {
+        console.error('Reset password error:', error.message);
+        return res.status(500).json({
+            message: 'Server error during password reset.'
+        });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
-    forgotPassword
+    getMe,
+    forgotPassword,
+    resetPassword
 };

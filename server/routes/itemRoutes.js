@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 
@@ -8,27 +7,31 @@ const {
     searchItems,
     getItemById,
     updateItem,
-    deleteItem
+    deleteItem,
+    updateItemStatus
 } = require('../controllers/itemController');
 
 const { protect } = require('../middleware/authMiddleware');
 
-// Report lost or found item
+// Report lost or found item (Authenticated)
 router.post('/', protect, createItem);
 
 // Search items
-router.get('/search', protect, searchItems);
+router.get('/search', getAllItems);
 
 // Browse all items
-router.get('/', protect, getAllItems);
+router.get('/', getAllItems);
 
 // Get individual item details
-router.get('/:id', protect, getItemById);
+router.get('/:id', getItemById);
 
-// Update item
+// Update item (Owner or Admin)
 router.put('/:id', protect, updateItem);
 
-// Delete item
+// Delete item (Owner or Admin)
 router.delete('/:id', protect, deleteItem);
+
+// Update item status specifically (Owner or Admin)
+router.patch('/:id/status', protect, updateItemStatus);
 
 module.exports = router;

@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
@@ -6,7 +5,9 @@ const { protect } = require('../middleware/authMiddleware');
 const {
     registerUser,
     loginUser,
-    forgotPassword
+    getMe,
+    forgotPassword,
+    resetPassword
 } = require('../controllers/authController');
 
 // Registration
@@ -14,13 +15,14 @@ router.post('/register', registerUser);
 
 // Login
 router.post('/login', loginUser);
+
+// Current User Profile
+router.get('/me', protect, getMe);
+
+// Forgot Password
 router.post('/forgot-password', forgotPassword);
-// Get logged-in user's profile
-router.get('/me', protect, async (req, res) => {
-    res.status(200).json({
-        message: 'User authenticated successfully',
-        user: req.user
-    });
-});
+
+// Reset Password
+router.post('/reset-password/:token', resetPassword);
 
 module.exports = router;
