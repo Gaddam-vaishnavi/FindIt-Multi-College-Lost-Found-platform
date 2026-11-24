@@ -40,10 +40,11 @@ const createItem = async (req, res) => {
             });
         }
 
-        // Found items require an image
-        if (normalizedType === 'found' && (!image || !image.trim())) {
+        // Found items require an uploaded image. Lost items stay optional.
+        const imageUrl = typeof image === 'string' ? image.trim() : '';
+        if (normalizedType === 'found' && !imageUrl) {
             return res.status(400).json({
-                message: 'A photo is required when reporting a found item'
+                message: 'Please upload an image of the found item.'
             });
         }
 
@@ -81,7 +82,7 @@ const createItem = async (req, res) => {
             type: normalizedType,
             location: location.trim(),
             date: itemDate,
-            image: image || '',
+            image: imageUrl,
             college: reportCollege,
             status: 'active',
             reportedBy: req.user._id
